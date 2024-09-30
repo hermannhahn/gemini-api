@@ -1,6 +1,7 @@
 require('dotenv').config();
 import express from 'express';
-const sqlite3 = require('sqlite3').verbose();
+import sqlite3 from 'sqlite3';
+
 
 const app = express();
 
