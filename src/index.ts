@@ -30,9 +30,9 @@ db.run(`
 `);
 
 // Função para obter o usuário da chave api informada
-function getUserByApiKey(apiKey) {
+function getUserByApiKey(apiKey: string) {
   return new Promise((resolve, reject) => {
-    db.get('SELECT * FROM users WHERE api_key = ?', [apiKey], (err, row) => {
+    db.get('SELECT * FROM users WHERE api_key = ?', [apiKey], (err: any, row: any) => {
       if (err) {
         reject(err);
       } else {
@@ -43,7 +43,7 @@ function getUserByApiKey(apiKey) {
 }
 
 // Middleware para autenticação
-app.use(async (req, res, next) => {
+app.use(async (req: any, res: any, next: any) => {
   const apiKey = req.headers.authorization;
   if (!apiKey) {
     return res.status(401).json({ error: 'API key não fornecida' });
@@ -64,8 +64,8 @@ app.use(async (req, res, next) => {
 
 
 // Função para adicionar memória de curto prazo
-function addToShortMemory(userId, role, memory) {
-  db.run('INSERT INTO shortmemory (user_id, role, memory) VALUES (?, ?, ?)', [userId, role, memory], (err) => {
+function addToShortMemory(userId: string, role: string, memory: string) {
+  db.run('INSERT INTO shortmemory (user_id, role, memory) VALUES (?, ?, ?)', [userId, role, memory], (err: any) => {
     if (err) {
       console.error(err.message);
     }
@@ -76,9 +76,9 @@ function addToShortMemory(userId, role, memory) {
 }
 
 // Função para ler histório de um usuário
-function lastMemories(userId) {
+function lastMemories(userId: string) {
   return new Promise((resolve, reject) => {
-    db.all('SELECT user_id, role, memory FROM shortmemory WHERE user_id = ? ORDER BY data ASC', [userId], (err, rows) => {
+    db.all('SELECT user_id, role, memory FROM shortmemory WHERE user_id = ? ORDER BY data ASC', [userId], (err: any, rows: any[]) => {
       if (err) {
         reject(err);
       } else {
@@ -113,13 +113,13 @@ const generationConfig = {
 };
 
 // Default route
-app.get('/', (req, res) => {
+app.get('/', (req: any, res: any) => {
   res.send('API Gemini funcionando!');
 });
 
 
 // Rota para receber a pergunta
-app.get('/ask', async (req, res) => {
+app.get('/ask', async (req: any, res: any) => {
     const ask = req.query.ask;
     const userId = req.query.userId; // Assumindo que o ID do usuário seja passado como parâmetro
 
@@ -160,7 +160,7 @@ app.listen(port, () => {
 
 // Feche a conexão com o banco de dados quando o servidor parar
 process.on('SIGINT', () => {
-  db.close((err) => {
+  db.close((err: any) => {
     if (err) {
       console.error(err.message);
     }
