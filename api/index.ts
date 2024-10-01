@@ -1,61 +1,10 @@
 require('dotenv').config();
 import express from 'express';
-import sqlite3 from 'sqlite3';
-
 
 const app = express();
 
 // enable JSON body parser
 app.use(express.json());
-
-// Conectar ao banco de dados
-const db = new sqlite3.Database('short_memory.db');
-
-// Criar a tabela (se não existir)
-db.run(`
-    CREATE TABLE IF NOT EXISTS short_memory (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT,
-        role TEXT,
-        memory TEXT,
-        data DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-`);
-db.run(`
-    CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT,
-        password TEXT,
-        name TEXT,
-        data DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-`);
-
-// Função para adicionar uma memory
-function addMessage(userId: string, role: string, memory: string) {
-  db.run('INSERT INTO short_memory (user_id, role, memory) VALUES (?, ?, ?)', [userId, role, memory], (err: any) => {
-    if (err) {
-      console.error(err.message);
-    }
-  });
-
-  // Remover mensagens mais antigas que 33 minutos
-  db.run('DELETE FROM short_memory WHERE data < datetime("now", "-33 minutes")');
-}
-
-// Função para ler memória de curto prazo
-function readShortMemory(userId: string) {
-  return new Promise((resolve, reject) => {
-    db.all('SELECT user_id, role, memory FROM short_memory WHERE user_id = ? ORDER BY data ASC', [userId], (err: any, rows: any[]) => {
-      if (err) {
-        reject(err);
-      } else {
-        // Informar nome na primeira linha do histórico depois preencher com o histórico
-        resolve(rows.map(row => ({ role: row.role, parts: [{ text: row.memory }] })));
-      }
-    });
-  });
-}
 
 // Importa a biblioteca do Gemini
 const {
@@ -87,49 +36,34 @@ const generationConfig = {
 
 // Rota para receber a pergunta
 app.get('/', async (req, res) => {
-    const userId = req.query.userId; // Assumindo que o ID do usuário seja passado como parâmetro
-    const ask = req.query.ask;
-    console.log(userId, ask);
+  const userId = req.query.userId; // Assumindo que o ID do usuário seja passado como parâmetro
+  const ask = req.query.ask;
+  console.log(userId, ask);
 
-    try {
-      // Adiciona a pergunta ao histórico
-      addMessage((userId || "").toString(), "user", (ask || "").toString());
-      // Cria uma nova sessão de chat
-      const chatSession = model.startChat({
-        generationConfig,
-        // safetySettings: Adjust safety settings
-        // See https://ai.google.dev/gemini-api/docs/safety-settings
-        history: await readShortMemory((userId || "").toString()),
-        // safetySettings: {
-        //   harmBlockThreshold: HarmBlockThreshold.HIGH,
-        //   harmCategory: HarmCategory.ALL,
-        // },
-      });
-
-      // Envia solicitação
-      const result = await chatSession.sendMessage(ask)
-      const answer = result.response.text();
-
-      // Adiciona a resposta ao histórico
-      addMessage((userId || "").toString(), "model", answer);
-      
-      // Retorna a resposta do Gemini
-      res.json({ result: [ask, answer] });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: 'Erro ao processar a pergunta' });
-  }
-});
-
-// Feche a conexão com o banco de dados quando o servidor parar
-process.on('SIGINT', () => {
-    db.close((err: any) => {
-        if (err) {
-            console.error(err.message);
-        }
-        console.log('Conexão com o banco de dados fechada.');
-        process.exit(0);
+  try {
+    // Cria uma nova sessão de chat
+    const chatSession = model.startChat({
+      generationConfig,
+      // safetySettings: Adjust safety settings
+      // See https://ai.google.dev/gemini-api/docs/safety-settings
+      history: [],
+      // safetySettings: {
+      //   harmBlockThreshold: HarmBlockThreshold.HIGH,
+      //   harmCategory: HarmCategory.ALL,
+      // },
     });
+
+    // Envia solicitação
+    const result = await chatSession.sendMessage(ask)
+    const answer = result.response.text();
+    
+    // Retorna a resposta do Gemini
+    res.json({ result: [ask, answer] });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Erro ao processar a pergunta' });
+  }
+
 });
   
 export default app;
