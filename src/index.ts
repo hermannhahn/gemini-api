@@ -151,7 +151,7 @@ app.get('/ask', async (req: any, res: any) => {
 
     } catch (error) {
       console.error(error);
-      res.status(500).json({ error: 'Erro ao processar pergunta' });
+      res.status(500).json({ error: 'Erro ao processar a pergunta' });
   }
 });
 
