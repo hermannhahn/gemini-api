@@ -1,3 +1,6 @@
+# API
+*.db
+
 # Logs
 logs
 *.log
