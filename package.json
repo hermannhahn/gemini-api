@@ -2,7 +2,7 @@
   "name": "gemini-api",
   "version": "1.0.0",
   "description": "Gemini API",
-  "main": "./src/index.ts",
+  "main": "./dist/index.js",
   "scripts": {
     "dev": "npx tsx watch ./src/index.ts",
     "dev-test": "ts-node ./src/index.ts",
