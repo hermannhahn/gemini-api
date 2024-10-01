@@ -1,7 +1,7 @@
 require('dotenv').config();
+import express from 'express';
+import sqlite3 from 'sqlite3';
 
-const express = require('express');
-const sqlite3 = require('sqlite3').verbose();
 
 const app = express();
 const port = process.env.PORT || 3000; // Porta onde o servidor irá escutar

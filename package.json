@@ -21,7 +21,7 @@
     "api"
   ],
   "author": "Hermann Hahn",
-  "license": "GPL-3.0-or-later",
+  "license": "GPL-3.0",
   "bugs": {
     "url": "https://github.com/hermannhahn/gemini-api/issues"
   },
