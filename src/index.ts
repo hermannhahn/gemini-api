@@ -121,12 +121,12 @@ app.get('/', (req: any, res: any) => {
 
 // Rota para receber a pergunta
 app.get('/ask', async (req: any, res: any) => {
-    const ask = req.query.ask;
+    const question = req.query.question;
     const userId = req.query.userId; // Assumindo que o ID do usuário seja passado como parâmetro
 
     try {
       // Adiciona a memoria de curto prazo
-      addToShortMemory(userId, "user", ask);
+      addToShortMemory(userId, "user", question);
       // Cria uma nova sessão de chat
       const chatSession = model.startChat({
         generationConfig,
@@ -140,14 +140,14 @@ app.get('/ask', async (req: any, res: any) => {
       });
 
       // Envia solicitação
-      const result = await chatSession.sendMessage(ask)
+      const result = await chatSession.sendMessage(question)
       const answer = result.response.text();
 
       // Adiciona a resposta ao histórico
       addToShortMemory(userId, "model", answer);
       
       // Retorna a resposta do Gemini
-      res.json({ result: [answer] });
+      res.json({ answer: [answer] });
 
     } catch (error) {
       console.error(error);
