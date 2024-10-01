@@ -2,14 +2,13 @@ require('dotenv').config();
 import express from 'express';
 import sqlite3 from 'sqlite3';
 
-
 const app = express();
 const port = process.env.PORT || 3000; // Porta onde o servidor irá escutar
 
 // Conectar ao banco de dados
 const db = new sqlite3.Database('memory.db');
 
-// Criar a tabela (se não existir)
+// Criar tabela de usuários
 db.run(`
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -19,6 +18,8 @@ db.run(`
     data DATETIME DEFAULT CURRENT_TIMESTAMP
   )
 `);
+
+// Criar memória de curto prazo
 db.run(`
   CREATE TABLE IF NOT EXISTS shortmemory (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
