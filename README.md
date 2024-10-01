@@ -1,2 +1,0 @@
-# gemini-api
-Gemini API
