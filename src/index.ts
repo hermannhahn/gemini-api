@@ -1,7 +1,10 @@
-require('dotenv').config();
 import express from 'express';
 import sqlite3 from 'sqlite3';
+import * as dotenv from 'dotenv';
+import bcrypt from 'bcrypt';
 
+
+dotenv.config();
 const app = express();
 const port = process.env.PORT || 3000; // Porta onde o servidor irá escutar
 
@@ -43,26 +46,114 @@ function getUserByApiKey(apiKey: string) {
   });
 }
 
+// Função para obter dados do usuário
+function getUserByUserId(userId: string) {
+  return new Promise((resolve, reject) => {
+    db.get('SELECT * FROM users WHERE user_id = ?', [userId], (err: any, row: any) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(row);
+      }
+    });
+  });
+}
+
 // Middleware para autenticação
 app.use(async (req: any, res: any, next: any) => {
-  const apiKey = req.headers.authorization;
-  if (!apiKey) {
-    return res.status(401).json({ error: 'API key não fornecida' });
+
+  if (req.path == '/ask') {
+
+    const apiKey = req.headers.authorization;
+    if (!apiKey) {
+      return res.status(401).json({ error: 'API key não fornecida' });
+    }
+
+    try {
+      const user = await getUserByApiKey(apiKey);
+      if (!user) {
+        return res.status(401).json({ error: 'API key inválida' });
+      }
+      req.user = user;
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Erro ao verificar a API key' });
+    }
+  }
+  next();
+});
+
+// Rota para criar um novo usuário
+app.post('/register', async (req: any, res: any) => {
+
+  // Verifica se existe body na requisição
+  if (!req.headers) {
+    return res.status(400).json({ error: 'Invalid request' });
   }
 
+  // Verifica se foi informado o usuário e senha por URLEncoded
+  const userId = req.headers.userid;
+  const password = req.headers.password;
+
+  // Verifica se o usuário e senha foram informados
+  if (!userId || !password) {
+    return res.status(400).json({ error: 'User e-mail and password are required' });
+  }
+
+
   try {
-    const user = await getUserByApiKey(apiKey);
-    if (!user) {
-      return res.status(401).json({ error: 'API key inválida' });
+    // Verifica se o usuário já existe
+    const existingUser = await getUserByUserId(userId);
+    if (existingUser) {
+      return res.status(400).json({ error: 'User e-mail already registered' });
     }
-    req.user = user;
-    next();
+
+    // Gera uma nova API key
+    const apiKey = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+
+    // Encripta a senha
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Insere o novo usuário no banco de dados
+    db.run('INSERT INTO users (user_id, password, api_key) VALUES (?, ?, ?)', [userId, hashedPassword, apiKey], (err: any) => {
+      if (err) {
+        console.error(err.message);
+        return res.status(500).json({ error: 'Error while creating user' });
+      }
+      res.json({ success: true, api_key: apiKey });
+      console.log("New user created: " + userId);
+    });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Erro ao verificar a API key' });
+    res.status(500).json({ error: 'Error while creating user' });
   }
 });
 
+// Rota para obter a API key
+app.post('/login', async (req: any, res: any) => {
+  const userId = req.headers.userid;
+  const password = req.headers.password;
+
+  // Verifica se o usuário e senha foram informados
+  if (!userId || !password) {
+    return res.status(400).json({ error: 'User e-mail and password are required' });
+  }
+
+  // Verifica se o usuário existe
+  const user: any = await getUserByUserId(userId);
+  if (!user) {
+    return res.status(401).json({ error: 'User not found' });
+  }
+
+  // Compara as senhas utilizando o hash e data
+  const isPasswordValid: any = await bcrypt.compare(password, user.password);
+  if (!isPasswordValid) {
+    return res.status(401).json({ error: 'Invalid password' });
+  }
+
+  // Retorna a API Key do usuário
+  res.json({ success: true, api_key: user.api_key });
+});
 
 // Função para adicionar memória de curto prazo
 function addToShortMemory(userId: string, role: string, memory: string) {
@@ -121,8 +212,19 @@ app.get('/', (req: any, res: any) => {
 
 // Rota para receber a pergunta
 app.get('/ask', async (req: any, res: any) => {
-    const question = req.query.question;
-    const userId = req.query.userId; // Assumindo que o ID do usuário seja passado como parâmetro
+    const question: any = req.query.question;
+    // Pega o userId da api key informada no header pela key authorization
+    const userId: any = await getUserByApiKey(req.headers.authorization)
+
+    // Verifica se o userId da API Key existe
+    if (!userId) {
+      return res.status(400).json({ error: 'Invalid request' });
+    }
+
+    // Verifica se a pergunta foi informada
+    if (!question) {
+      return res.status(400).json({ error: 'Question is required' });
+    }
 
     try {
       // Adiciona a memoria de curto prazo
